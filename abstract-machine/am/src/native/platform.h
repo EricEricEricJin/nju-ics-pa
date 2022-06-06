@@ -7,6 +7,11 @@
 #include <klib.h>
 #include <klib-macros.h>
 
+#ifdef SIGSTKSZ
+#undef SIGSTKSZ
+#define SIGSTKSZ 8192
+#endif
+
 void __am_get_example_uc(Context *r);
 void __am_get_intr_sigmask(sigset_t *s);
 int __am_is_sigmask_sti(sigset_t *s);
