@@ -2,7 +2,11 @@
 #include <cpu/cpu.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "common.h"
+#include "memory/vaddr.h"
 #include "debug.h"
 #include "sdb.h"
 
@@ -54,6 +58,17 @@ static int cmd_info(char* args) {
   return 0;
 }
 
+static int cmd_x(char* args) {
+  char* addr_str;
+  int len = (int)strtol(args, &addr_str, 10);
+  vaddr_t addr = (vaddr_t)strtol(addr_str + 1, NULL, 16);
+  
+  for (int i = 0; i < len; i++) {
+    printf("0x%-14x0x%-14x", addr + i, vaddr_read(addr, 1));
+  }
+  return 0;
+}
+
 static struct {
   const char *name;
   const char *description;
@@ -65,6 +80,7 @@ static struct {
 
   /* TODO: Add more commands */
   { "info", "Display register info", cmd_info },
+  { "x", "Scan memory", cmd_x },
 
 };
 
