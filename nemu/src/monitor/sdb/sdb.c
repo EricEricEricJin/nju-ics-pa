@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "common.h"
 #include "memory/vaddr.h"
 #include "debug.h"
 #include "sdb.h"
@@ -64,8 +63,9 @@ static int cmd_x(char* args) {
   vaddr_t addr = (vaddr_t)strtol(addr_str + 1, NULL, 16);
   
   for (int i = 0; i < len; i++) {
-    printf("0x%-14x0x%-14x", addr + i, vaddr_read(addr, 1));
+    printf("0x%-14x0x%-14x \n", addr + i, vaddr_read(addr, 1));
   }
+
   return 0;
 }
 
