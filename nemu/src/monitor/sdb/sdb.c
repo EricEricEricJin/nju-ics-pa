@@ -70,9 +70,9 @@ static int cmd_x(char* args) {
   vaddr_t end_addr = addr + 4 * len;
 
   while(true) {
-    printf("0x%-14x", addr);
+    printf("0x%08x: ", addr);
     for (int i = 0; i < 4; i++) {
-      printf("0x%-8x\t", vaddr_read(addr, 4));
+      printf("0x%08x\t", vaddr_read(addr, 4));
       addr += 4;
       if (addr >= end_addr) {
         printf("\n");
