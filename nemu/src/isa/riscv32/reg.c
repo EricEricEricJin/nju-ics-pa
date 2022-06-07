@@ -12,7 +12,8 @@ const char *regs[] = {
 
 void isa_reg_display() {
   for (int i = 0; i < sizeof(regs) / sizeof(char*); i++) {
-    printf("%s  %x \n", reg_name(i, sizeof(rtlreg_t)), gpr(i));
+    rtlreg_t current_reg_val = gpr(i);
+    printf("%-8s0x%-14x%-16d \n", reg_name(i, sizeof(rtlreg_t)), current_reg_val, current_reg_val);
   }
 }
 
