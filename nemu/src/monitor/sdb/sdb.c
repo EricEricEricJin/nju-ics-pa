@@ -70,7 +70,7 @@ static int cmd_x(char* args) {
   vaddr_t end_addr = addr + 4 * len;
 
   while(true) {
-    printf("0x%08x: ", addr);
+    printf("0x%08x:\t", addr);
     for (int i = 0; i < 4; i++) {
       printf("0x%08x\t", vaddr_read(addr, 4));
       addr += 4;
