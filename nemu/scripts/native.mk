@@ -20,8 +20,8 @@ run-env: $(BINARY) $(DIFF_REF_SO)
 
 run: run-env
 	$(call git_commit, "run")
+	echo $(NEMU_EXEC);
 	$(NEMU_EXEC)
-	echo hama;
 gdb: run-env
 	$(call git_commit, "gdb")
 	gdb -s $(BINARY) --args $(NEMU_EXEC)
