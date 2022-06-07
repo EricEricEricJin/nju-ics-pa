@@ -2,6 +2,8 @@
 #include <cpu/cpu.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <string.h>
+#include "debug.h"
 #include "sdb.h"
 
 static int is_batch_mode = false;
@@ -39,6 +41,19 @@ static int cmd_q(char *args) {
 
 static int cmd_help(char *args);
 
+static int cmd_info(char* args) {
+  if (args) {
+    if (strcmp(args, "r") == 0) {
+      isa_reg_display();
+    } else if (strcmp(args, "w") == 0) {
+      // TODO
+    } else {
+      Log("Info error: Wrong sub command");
+    }
+  }
+  return 0;
+}
+
 static struct {
   const char *name;
   const char *description;
@@ -49,6 +64,7 @@ static struct {
   { "q", "Exit NEMU", cmd_q },
 
   /* TODO: Add more commands */
+  { "info", "Display register info", cmd_info },
 
 };
 
