@@ -225,11 +225,31 @@ int _eval(Token *tokens, int token_n) {
   return result;
 }
 
+void print_tokens() {
+  for (int i = 0; i < 32; i++) {
+    if (tokens[i].type == TK_ADD)
+      printf(" + ");
+    else if (tokens[i].type == TK_SUB)
+      printf(" - ");
+    else if (tokens[i].type == TK_MUL)
+      printf(" * ");
+    else if (tokens[i].type == TK_DIV)
+      printf(" / ");
+    else if (tokens[i].type == TK_BKT_L)
+      printf(" ( ");
+    else if (tokens[i].type == TK_BKT_R)
+      printf(" ) ");
+    else if (tokens[i].type == TK_NUM)
+      printf(" %d ", tokens[i].num);
+  }
+  printf("\n");
+}
+
 word_t expr(char *e, bool *success) {
   if (!make_token(e)) {
     *success = false;
     return 0;
   }
-  make_token(e);
+  print_tokens();
   return (word_t)_eval(tokens, nr_token);
 }
