@@ -45,7 +45,7 @@ static int cmd_p(char *args) {
   bool success;
   word_t result = expr(args, &success);
   if (success) {
-    printf("%d", result);
+    printf("%d\n", result);
     return 0;
   } else
     return -1;
