@@ -1,3 +1,4 @@
+#include "common.h"
 #include <isa.h>
 
 /* We use the POSIX regex functions to process regular expressions.
@@ -7,22 +8,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-
-// implement binary tree
-// need method: add_branch
-
-enum { BT_ADD, BT_SUB, BT_MUL, BT_DIV, BT_NUM, BT_EXPR };
-
-typedef struct Node {
-  struct Node *parent;
-  struct Node *left;
-  struct Node *right;
-  int type;
-  union {
-    int value;
-    char content[20];
-  };
-} node_t;
 
 enum {
   TK_NOTYPE = 256,
@@ -44,9 +29,9 @@ static struct rule {
     {"-", TK_SUB},      // minus
     {"\\*", TK_MUL},    // multiply
     {"/", TK_DIV},      // divide
-    {"[0-9]*", TK_NUM}, // equal
     {"\\(", TK_BKT_L},  // left bracket
     {"\\)", TK_BKT_R},  // right bracker
+    {"[0-9]+", TK_NUM}, // equal
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -72,7 +57,7 @@ void init_regex() {
 
 typedef struct token {
   int type;
-  char str[32];
+  int num;
 } Token;
 
 static Token tokens[32] __attribute__((used)) = {};
@@ -96,13 +81,11 @@ static bool make_token(char *e) {
           pmatch.rm_so == 0) {
         // Pattern found at [(e + position + pmatch.so), (e + position +
         // pmatch.eo)]
-        char *substr_start = e + position;
+        char *substr_start = e + position + pmatch.rm_so;
         int substr_len = pmatch.rm_eo;
 
         Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s", i,
             rules[i].regex, position, substr_len, substr_len, substr_start);
-
-        position += substr_len;
 
         switch (rules[i].token_type) {
         case TK_NOTYPE:
@@ -117,22 +100,129 @@ static bool make_token(char *e) {
           break;
         case TK_NUM:
           tokens[nr_token].type = TK_NUM;
-          memcpy(tokens[nr_token].str, e + position + pmatch.rm_so,
-                 sizeof(char) * (pmatch.rm_eo - pmatch.rm_so)); // copy
-          tokens[nr_token].str[pmatch.rm_eo - pmatch.rm_so] = '\0';
+          tokens[nr_token++].num = strtol(substr_start, NULL, 10);
+          break;
         }
         break;
       }
     }
-    position += pmatch.rm_eo;
 
     if (i == NR_REGEX) {
       printf("no match at position %d\n%s\n%*.s^\n", position, e, position, "");
       return false;
+    } else {
+      position += pmatch.rm_eo;
     }
   }
 
   return true;
+}
+
+int _eval(Token *tokens, int token_n) {
+  // brackets
+  int bkt_left, bkt_right, bkt_level;
+
+  // eliminate all the brackets
+  for (int tk_idx = 0; tk_idx < token_n; tk_idx = bkt_right + 1) {
+    bkt_left = -1;
+    bkt_right = -1;
+    for (int i = tk_idx; i < token_n; i++) {
+      if (tokens[i].type == TK_BKT_L) {
+        bkt_left = i;
+        break;
+      }
+    }
+    bkt_level = 1;
+
+    for (int i = bkt_left + 1; i < token_n; i++) {
+      if (tokens[i].type == TK_BKT_L) {
+        bkt_level++;
+      } else if (tokens[i].type == TK_BKT_R) {
+        bkt_level--;
+        if (bkt_level == 0) {
+          bkt_right = i;
+          break;
+        }
+      }
+    }
+
+    if (bkt_left != -1 && bkt_right != -1) {
+      tokens[bkt_left].num =
+          _eval(tokens + bkt_left + 1, bkt_right - bkt_left - 1);
+      tokens[bkt_left].type = TK_NUM;
+      for (int i = bkt_left + 1; i <= bkt_right; i++) {
+        tokens[i].type = TK_NOTYPE;
+      }
+    } else {
+      break;
+    }
+  }
+
+  // print_tokens(tokens, 32);
+  // no bracket cases
+
+  // find all * and /
+  Token *tk_left = NULL, *tk_right = NULL, *tk_operator = NULL;
+
+  int result = 0;
+
+  for (int i = 0; i < token_n; i++) {
+    switch (tokens[i].type) {
+    case TK_NUM:
+      if (tk_operator == NULL) {
+        tk_left = tokens + i;
+        tk_right = NULL;
+      } else {
+        tk_right = tokens + i;
+      }
+      break;
+    case TK_MUL:
+    case TK_DIV:
+      tk_operator = tokens + i;
+      break;
+    }
+
+    if (tk_right) {
+      switch (tk_operator->type) {
+      case TK_MUL:
+        result = tk_left->num * tk_right->num;
+        break;
+      case TK_DIV:
+        result = tk_left->num / tk_right->num;
+        break;
+      }
+
+      tk_left->type = TK_NUM;
+      tk_left->num = result;
+
+      tk_operator->type = TK_NOTYPE;
+      tk_operator = NULL;
+
+      tk_right->type = TK_NOTYPE;
+      tk_right = NULL;
+    }
+  }
+
+  // add and sub
+  result = 0;
+  int operator= TK_ADD;
+
+  for (int i = 0; i < token_n; i++) {
+    switch (tokens[i].type) {
+    case TK_ADD:
+    case TK_SUB:
+      operator= tokens[i].type;
+      break;
+    case TK_NUM:
+      if (operator== TK_ADD)
+        result += tokens[i].num;
+      else if (operator== TK_SUB)
+        result -= tokens[i].num;
+      break;
+    }
+  }
+
+  return result;
 }
 
 word_t expr(char *e, bool *success) {
@@ -140,46 +230,6 @@ word_t expr(char *e, bool *success) {
     *success = false;
     return 0;
   }
-
-  node_t *head = NULL;
-  node_t *temp_node;
-  // add branches
-  // +, -:
-
-  // assume already checked
-  int inside_bkt = false;
-
-  for (int i = 0; i < nr_token; i++) {
-    switch (tokens[i].type) {
-    case TK_BKT_L:
-      inside_bkt++;
-      break;
-    case TK_BKT_R:
-      inside_bkt--;
-      break;
-    case TK_ADD:
-    case TK_SUB:
-      if (inside_bkt == 0) {
-        temp_node = (node_t *)malloc(sizeof(node_t));
-        temp_node->parent = NULL;
-        temp_node->left = head;
-        temp_node->type = tokens[i].type;
-        head = temp_node;
-      }
-      break;
-    case TK_MUL:
-    case TK_DIV:
-    }
-  }
-
-  /* TODO: Insert codes to evaluate the expression. */
-  // TODO();
-
-  // inside brackets
-
-  // mul / div
-
-  // plus / minus
-
-  return 0;
+  make_token(e);
+  return (word_t)_eval(tokens, nr_token);
 }

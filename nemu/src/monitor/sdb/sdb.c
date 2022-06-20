@@ -1,22 +1,23 @@
-#include <isa.h>
+#include "sdb.h"
+#include "common.h"
+#include "debug.h"
+#include "memory/vaddr.h"
 #include <cpu/cpu.h>
-#include <readline/readline.h>
+#include <isa.h>
 #include <readline/history.h>
+#include <readline/readline.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "common.h"
-#include "memory/vaddr.h"
-#include "debug.h"
-#include "sdb.h"
 
 static int is_batch_mode = false;
 
 void init_regex();
 void init_wp_pool();
 
-/* We use the `readline' library to provide more flexibility to read from stdin. */
-static char* rl_gets() {
+/* We use the `readline' library to provide more flexibility to read from stdin.
+ */
+static char *rl_gets() {
   static char *line_read = NULL;
 
   if (line_read) {
@@ -38,14 +39,21 @@ static int cmd_c(char *args) {
   return 0;
 }
 
+static int cmd_q(char *args) { return -1; }
 
-static int cmd_q(char *args) {
-  return -1;
+static int cmd_p(char *args) {
+  bool success;
+  word_t result = expr(args, &success);
+  if (success) {
+    printf("%d", result);
+    return 0;
+  } else
+    return -1;
 }
 
 static int cmd_help(char *args);
 
-static int cmd_info(char* args) {
+static int cmd_info(char *args) {
   if (args) {
     if (strcmp(args, "r") == 0) {
       isa_reg_display();
@@ -58,18 +66,18 @@ static int cmd_info(char* args) {
   return 0;
 }
 
-static int cmd_x(char* args) {
-  char* addr_str;
+static int cmd_x(char *args) {
+  char *addr_str;
   int len = (int)strtol(args, &addr_str, 10);
   vaddr_t addr = (vaddr_t)strtol(addr_str + 1, NULL, 16);
-  
+
   // for (vaddr_t _addr = addr; _addr < addr + len * 4; _addr++) {
   //   printf("0x%-14x0x%-14x \n", addr + i, vaddr_read(addr, 1));
   // }
 
   vaddr_t end_addr = addr + 4 * len;
 
-  while(true) {
+  while (true) {
     printf("0x%08x:\t", addr);
     for (int i = 0; i < 4; i++) {
       printf("0x%08x\t", vaddr_read(addr, 4));
@@ -89,16 +97,16 @@ CMD_X_RET:
 static struct {
   const char *name;
   const char *description;
-  int (*handler) (char *);
-} cmd_table [] = {
-  { "help", "Display informations about all supported commands", cmd_help },
-  { "c", "Continue the execution of the program", cmd_c },
-  { "q", "Exit NEMU", cmd_q },
+  int (*handler)(char *);
+} cmd_table[] = {
+    {"help", "Display informations about all supported commands", cmd_help},
+    {"c", "Continue the execution of the program", cmd_c},
+    {"q", "Exit NEMU", cmd_q},
 
-  /* TODO: Add more commands */
-  { "info", "Display register info", cmd_info },
-  { "x", "Scan memory", cmd_x },
-
+    /* TODO: Add more commands */
+    {"info", "Display register info", cmd_info},
+    {"x", "Scan memory", cmd_x},
+    {"p", "Print", cmd_p},
 };
 
 #define NR_CMD ARRLEN(cmd_table)
@@ -110,12 +118,11 @@ static int cmd_help(char *args) {
 
   if (arg == NULL) {
     /* no argument given */
-    for (i = 0; i < NR_CMD; i ++) {
+    for (i = 0; i < NR_CMD; i++) {
       printf("%s - %s\n", cmd_table[i].name, cmd_table[i].description);
     }
-  }
-  else {
-    for (i = 0; i < NR_CMD; i ++) {
+  } else {
+    for (i = 0; i < NR_CMD; i++) {
       if (strcmp(arg, cmd_table[i].name) == 0) {
         printf("%s - %s\n", cmd_table[i].name, cmd_table[i].description);
         return 0;
@@ -126,9 +133,7 @@ static int cmd_help(char *args) {
   return 0;
 }
 
-void sdb_set_batch_mode() {
-  is_batch_mode = true;
-}
+void sdb_set_batch_mode() { is_batch_mode = true; }
 
 void sdb_mainloop() {
   if (is_batch_mode) {
@@ -136,12 +141,14 @@ void sdb_mainloop() {
     return;
   }
 
-  for (char *str; (str = rl_gets()) != NULL; ) {
+  for (char *str; (str = rl_gets()) != NULL;) {
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */
     char *cmd = strtok(str, " ");
-    if (cmd == NULL) { continue; }
+    if (cmd == NULL) {
+      continue;
+    }
 
     /* treat the remaining string as the arguments,
      * which may need further parsing
@@ -157,14 +164,18 @@ void sdb_mainloop() {
 #endif
 
     int i;
-    for (i = 0; i < NR_CMD; i ++) {
+    for (i = 0; i < NR_CMD; i++) {
       if (strcmp(cmd, cmd_table[i].name) == 0) {
-        if (cmd_table[i].handler(args) < 0) { return; }
+        if (cmd_table[i].handler(args) < 0) {
+          return;
+        }
         break;
       }
     }
 
-    if (i == NR_CMD) { printf("Unknown command '%s'\n", cmd); }
+    if (i == NR_CMD) {
+      printf("Unknown command '%s'\n", cmd);
+    }
   }
 }
 
