@@ -250,6 +250,7 @@ word_t expr(char *e, bool *success) {
     *success = false;
     return 0;
   }
-  print_tokens();
+  // print_tokens();
+  *success = true;
   return (word_t)_eval(tokens, nr_token);
 }
